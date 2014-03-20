@@ -46,7 +46,6 @@ class ZoomifyLayer extends L.TileLayer
     map.setView ll, tier
 
 
-
   _createTile: ->
     # tile = @_tileImg.cloneNode(false);
     # tile = $('<img class="leaflet-tile">')[0]
@@ -87,13 +86,8 @@ class ZoomifyLayer extends L.TileLayer
     for i in [0...tilesToLoad]
       @_addTile queue[i], fragment
 
-    @_container.appendChild fragment
+    @_tileContainer.appendChild fragment
 
-
-  _reset: ->
-    super()
-    # pass
-  
 
   _tileShouldBeLoaded: (point) ->
     if point.x >= 0 and point.y >= 0
@@ -162,6 +156,10 @@ class ZoomifyLayer extends L.TileLayer
       zoom = @_map.getZoom()
       return zoom
     return 0
+
+  
+  _adjustTilePoint: (tilePoint) ->
+    tilePoint
 
   
   getTileUrl: (tilePoint, zoom) ->
