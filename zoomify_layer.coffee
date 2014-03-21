@@ -12,13 +12,10 @@ class ZoomifyLayer extends L.TileLayer
       width: imageProperties.width
       height: imageProperties.height
       tilesize: imageProperties.tilesize or 256
-      
-    t = @numOfTiers()
-    @_tiers = ( Math.ceil(@imageProperties.width / @imageProperties.tilesize / Math.pow(2, t - i)) * Math.ceil(@imageProperties.height / @imageProperties.tilesize / Math.pow(2, t - i)) for i in [1..t])
-
+    @_initTiers()      
     # set minZoom and maxZoom
     @options.minZoom = 0
-    @options.maxZoom = t - 1
+    @options.maxZoom = @numOfTiers() - 1
 
 
   _getTierForResolution: (resolution) ->
@@ -92,9 +89,7 @@ class ZoomifyLayer extends L.TileLayer
   _tileShouldBeLoaded: (point) ->
     if point.x >= 0 and point.y >= 0
       tier = @_getZoomForUrl()
-      limitX = Math.pow(2, @numOfTiers() - tier - 1) * @imageProperties.tilesize * point.x
-      limitY = Math.pow(2, @numOfTiers() - tier - 1) * @imageProperties.tilesize * point.y
-      return limitX <= @imageProperties.width and limitY <= @imageProperties.height
+      return point.x <= @_tiers[tier][0] and point.y <= @_tiers[tier][1]
     return false
 
   _getTilePos: (tilePoint) ->
@@ -127,6 +122,27 @@ class ZoomifyLayer extends L.TileLayer
       @_removeOtherTiles tileBounds
 
 
+  _initTiers: ->
+    hf = (size, tilesize, k) ->
+      if size % tilesize / k < 1
+        return Math.floor size / tilesize
+      return Math.ceil size / tilesize
+
+    @_tiers = []
+    scaledTileSize = @imageProperties.tilesize / 2
+    [i, x, y] = [-1, 3, 2]
+    while Math.max(x, y) > 1
+      i += 1
+      scaledTileSize *= 2
+      x = hf @imageProperties.width, scaledTileSize, i + 1
+      y = hf @imageProperties.height, scaledTileSize, i + 1
+      @_tiers.push [x - 1, y - 1, x * y]
+    @_tiers.reverse()
+    @_numOfTiers = i + 1
+
+
+
+
   numOfTiers: ->
     if not @_numOfTiers?
       i = 0
@@ -135,6 +151,7 @@ class ZoomifyLayer extends L.TileLayer
         i += 1
         a = Math.ceil a / 2
       @_numOfTiers = i + 1
+      @_numOfTiers = i
     return @_numOfTiers
 
 
@@ -145,9 +162,9 @@ class ZoomifyLayer extends L.TileLayer
     tileSize = @imageProperties.tilesize
     idx = 0
     for i in [0...tier]
-      idx += @_tiers[i]
-    idx += y * Math.ceil(@imageProperties.width / @imageProperties.tilesize / Math.pow(2, numOfTiers - tier - 1))
-    idx += x
+      idx += @_tiers[i][2]
+    idx += y * @_tiers[tier][0] + x
+    # idx += x
     return Math.floor idx / 256
 
 

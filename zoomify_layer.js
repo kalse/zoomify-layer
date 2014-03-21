@@ -9,7 +9,6 @@
     __extends(ZoomifyLayer, _super);
 
     function ZoomifyLayer(url, imageProperties, options) {
-      var i, t;
       if (options == null) {
         options = {};
       }
@@ -23,17 +22,9 @@
         height: imageProperties.height,
         tilesize: imageProperties.tilesize || 256
       };
-      t = this.numOfTiers();
-      this._tiers = (function() {
-        var _i, _results;
-        _results = [];
-        for (i = _i = 1; 1 <= t ? _i <= t : _i >= t; i = 1 <= t ? ++_i : --_i) {
-          _results.push(Math.ceil(this.imageProperties.width / this.imageProperties.tilesize / Math.pow(2, t - i)) * Math.ceil(this.imageProperties.height / this.imageProperties.tilesize / Math.pow(2, t - i)));
-        }
-        return _results;
-      }).call(this);
+      this._initTiers();
       this.options.minZoom = 0;
-      this.options.maxZoom = t - 1;
+      this.options.maxZoom = this.numOfTiers() - 1;
     }
 
     ZoomifyLayer.prototype._getTierForResolution = function(resolution) {
@@ -104,12 +95,10 @@
     };
 
     ZoomifyLayer.prototype._tileShouldBeLoaded = function(point) {
-      var limitX, limitY, tier;
+      var tier;
       if (point.x >= 0 && point.y >= 0) {
         tier = this._getZoomForUrl();
-        limitX = Math.pow(2, this.numOfTiers() - tier - 1) * this.imageProperties.tilesize * point.x;
-        limitY = Math.pow(2, this.numOfTiers() - tier - 1) * this.imageProperties.tilesize * point.y;
-        return limitX <= this.imageProperties.width && limitY <= this.imageProperties.height;
+        return point.x <= this._tiers[tier][0] && point.y <= this._tiers[tier][1];
       }
       return false;
     };
@@ -140,6 +129,28 @@
       }
     };
 
+    ZoomifyLayer.prototype._initTiers = function() {
+      var hf, i, scaledTileSize, x, y, _ref;
+      hf = function(size, tilesize, k) {
+        if (size % tilesize / k < 1) {
+          return Math.floor(size / tilesize);
+        }
+        return Math.ceil(size / tilesize);
+      };
+      this._tiers = [];
+      scaledTileSize = this.imageProperties.tilesize / 2;
+      _ref = [-1, 3, 2], i = _ref[0], x = _ref[1], y = _ref[2];
+      while (Math.max(x, y) > 1) {
+        i += 1;
+        scaledTileSize *= 2;
+        x = hf(this.imageProperties.width, scaledTileSize, i + 1);
+        y = hf(this.imageProperties.height, scaledTileSize, i + 1);
+        this._tiers.push([x - 1, y - 1, x * y]);
+      }
+      this._tiers.reverse();
+      return this._numOfTiers = i + 1;
+    };
+
     ZoomifyLayer.prototype.numOfTiers = function() {
       var a, i;
       if (this._numOfTiers == null) {
@@ -150,6 +161,7 @@
           a = Math.ceil(a / 2);
         }
         this._numOfTiers = i + 1;
+        this._numOfTiers = i;
       }
       return this._numOfTiers;
     };
@@ -162,10 +174,9 @@
       tileSize = this.imageProperties.tilesize;
       idx = 0;
       for (i = _i = 0; 0 <= tier ? _i < tier : _i > tier; i = 0 <= tier ? ++_i : --_i) {
-        idx += this._tiers[i];
+        idx += this._tiers[i][2];
       }
-      idx += y * Math.ceil(this.imageProperties.width / this.imageProperties.tilesize / Math.pow(2, numOfTiers - tier - 1));
-      idx += x;
+      idx += y * this._tiers[tier][0] + x;
       return Math.floor(idx / 256);
     };
 
