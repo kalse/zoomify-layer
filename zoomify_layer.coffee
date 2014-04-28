@@ -163,7 +163,7 @@ class ZoomifyLayer extends L.TileLayer
     idx = 0
     for i in [0...tier]
       idx += @_tiers[i][2]
-    idx += y * @_tiers[tier][0] + x
+    idx += y * (@_tiers[tier][0] + 1) + x
     # idx += x
     return Math.floor idx / 256
 

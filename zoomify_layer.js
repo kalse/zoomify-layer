@@ -176,7 +176,7 @@
       for (i = _i = 0; 0 <= tier ? _i < tier : _i > tier; i = 0 <= tier ? ++_i : --_i) {
         idx += this._tiers[i][2];
       }
-      idx += y * this._tiers[tier][0] + x;
+      idx += y * (this._tiers[tier][0] + 1) + x;
       return Math.floor(idx / 256);
     };
 
