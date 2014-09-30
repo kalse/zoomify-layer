@@ -124,7 +124,7 @@ class ZoomifyLayer extends L.TileLayer
 
   _initTiers: ->
     hf = (size, tilesize, k) ->
-      if size % tilesize / k < 1
+      if size % tilesize / k <= 1
         return Math.floor size / tilesize
       return Math.ceil size / tilesize
 

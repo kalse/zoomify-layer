@@ -132,7 +132,7 @@
     ZoomifyLayer.prototype._initTiers = function() {
       var hf, i, scaledTileSize, x, y, _ref;
       hf = function(size, tilesize, k) {
-        if (size % tilesize / k < 1) {
+        if (size % tilesize / k <= 1) {
           return Math.floor(size / tilesize);
         }
         return Math.ceil(size / tilesize);
