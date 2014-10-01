@@ -64,40 +64,13 @@
       return tile;
     };
 
-    ZoomifyLayer.prototype._addTilesFromCenterOut = function(bounds) {
-      var center, fragment, i, j, point, queue, tilesToLoad, _i, _j, _k, _ref, _ref1, _ref2, _ref3;
-      queue = [];
-      center = bounds.getCenter();
-      for (j = _i = _ref = bounds.min.y, _ref1 = bounds.max.y; _ref <= _ref1 ? _i <= _ref1 : _i >= _ref1; j = _ref <= _ref1 ? ++_i : --_i) {
-        for (i = _j = _ref2 = bounds.min.x, _ref3 = bounds.max.x; _ref2 <= _ref3 ? _j <= _ref3 : _j >= _ref3; i = _ref2 <= _ref3 ? ++_j : --_j) {
-          point = new L.Point(i, j);
-          if (this._tileShouldBeLoaded(point)) {
-            queue.push(point);
-          }
-        }
-      }
-      tilesToLoad = queue.length;
-      if (tilesToLoad === 0) {
-        return;
-      }
-      queue.sort(function(a, b) {
-        return a.distanceTo(center) - b.distanceTo(center);
-      });
-      fragment = document.createDocumentFragment();
-      if (!this._tilesToLoad) {
-        this.fire('loading');
-      }
-      this._tilesToLoad += tilesToLoad;
-      for (i = _k = 0; 0 <= tilesToLoad ? _k < tilesToLoad : _k > tilesToLoad; i = 0 <= tilesToLoad ? ++_k : --_k) {
-        this._addTile(queue[i], fragment);
-      }
-      return this._tileContainer.appendChild(fragment);
-    };
-
     ZoomifyLayer.prototype._tileShouldBeLoaded = function(point) {
       var tier;
       if (point.x >= 0 && point.y >= 0) {
         tier = this._getZoomForUrl();
+        if (point.x <= this._tiers[tier][0] && point.y <= this._tiers[tier][1]) {
+          console.log(point);
+        }
         return point.x <= this._tiers[tier][0] && point.y <= this._tiers[tier][1];
       }
       return false;
@@ -109,30 +82,14 @@
       return tilePoint.multiplyBy(this.imageProperties.tilesize).subtract(origin);
     };
 
-    ZoomifyLayer.prototype._update = function(e) {
-      var bounds, nwTilePoint, seTilePoint, tileBounds, tileSize, zoom;
-      if (this._map == null) {
-        return;
-      }
-      bounds = this._map.getPixelBounds();
-      zoom = this._map.getZoom();
-      tileSize = this.imageProperties.tilesize;
-      if (zoom > this.options.maxZoom || zoom < this.options.minZoom) {
-        return;
-      }
-      nwTilePoint = new L.Point(Math.floor(bounds.min.x / tileSize), Math.floor(bounds.min.y / tileSize));
-      seTilePoint = new L.Point(Math.floor(bounds.max.x / tileSize), Math.floor(bounds.max.y / tileSize));
-      tileBounds = new L.Bounds(nwTilePoint, seTilePoint);
-      this._addTilesFromCenterOut(tileBounds);
-      if (this.options.unloadInvisibleTiles || this.options.reuseTiles) {
-        return this._removeOtherTiles(tileBounds);
-      }
+    ZoomifyLayer.prototype._getTileSize = function() {
+      return this.imageProperties.tilesize;
     };
 
     ZoomifyLayer.prototype._initTiers = function() {
       var hf, i, scaledTileSize, x, y, _ref;
       hf = function(size, tilesize, k) {
-        if (size % tilesize / k < 1) {
+        if (size % tilesize / Math.pow(2, k) < 1) {
           return Math.floor(size / tilesize);
         }
         return Math.ceil(size / tilesize);
@@ -143,8 +100,8 @@
       while (Math.max(x, y) > 1) {
         i += 1;
         scaledTileSize *= 2;
-        x = hf(this.imageProperties.width, scaledTileSize, i + 1);
-        y = hf(this.imageProperties.height, scaledTileSize, i + 1);
+        x = hf(this.imageProperties.width, scaledTileSize, i);
+        y = hf(this.imageProperties.height, scaledTileSize, i);
         this._tiers.push([x - 1, y - 1, x * y]);
       }
       this._tiers.reverse();

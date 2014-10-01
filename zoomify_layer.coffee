@@ -52,43 +52,12 @@ class ZoomifyLayer extends L.TileLayer
     return tile;
   
 
-  _addTilesFromCenterOut: (bounds) ->
-    queue = []
-    center = bounds.getCenter()
-
-    for j in [bounds.min.y..bounds.max.y]
-      for i in [bounds.min.x..bounds.max.x]
-
-        point = new L.Point(i, j)
-        if @_tileShouldBeLoaded point
-          queue.push(point)
-
-    tilesToLoad = queue.length
-    if tilesToLoad is 0
-      return
-
-    # load tiles in order of their distance to center
-    queue.sort (a, b) ->
-      return a.distanceTo(center) - b.distanceTo(center)
-
-
-    fragment = document.createDocumentFragment()
-
-    # if its the first batch of tiles to load
-    if not @_tilesToLoad
-      @fire 'loading'
-
-    @_tilesToLoad += tilesToLoad
-
-    for i in [0...tilesToLoad]
-      @_addTile queue[i], fragment
-
-    @_tileContainer.appendChild fragment
-
 
   _tileShouldBeLoaded: (point) ->
     if point.x >= 0 and point.y >= 0
       tier = @_getZoomForUrl()
+      if point.x <= @_tiers[tier][0] and point.y <= @_tiers[tier][1]
+        console.log(point)
       return point.x <= @_tiers[tier][0] and point.y <= @_tiers[tier][1]
     return false
 
@@ -97,34 +66,13 @@ class ZoomifyLayer extends L.TileLayer
     return tilePoint.multiplyBy(@imageProperties.tilesize).subtract(origin);
 
 
-  _update: (e) ->
-    if not @_map?
-      return
-
-    bounds = @_map.getPixelBounds()
-    zoom = @_map.getZoom()
-    tileSize = @imageProperties.tilesize
-
-    if zoom > @options.maxZoom or zoom < @options.minZoom
-      return;
-
-    nwTilePoint = new L.Point(
-            Math.floor(bounds.min.x / tileSize),
-            Math.floor(bounds.min.y / tileSize))
-    seTilePoint = new L.Point(
-            Math.floor(bounds.max.x / tileSize),
-            Math.floor(bounds.max.y / tileSize))
-    tileBounds = new L.Bounds(nwTilePoint, seTilePoint)
-
-    @_addTilesFromCenterOut tileBounds
-
-    if @options.unloadInvisibleTiles or @options.reuseTiles
-      @_removeOtherTiles tileBounds
+  _getTileSize: ->
+    @imageProperties.tilesize
 
 
   _initTiers: ->
     hf = (size, tilesize, k) ->
-      if size % tilesize / k < 1
+      if size % tilesize / Math.pow(2, k) < 1
         return Math.floor size / tilesize
       return Math.ceil size / tilesize
 
@@ -134,13 +82,11 @@ class ZoomifyLayer extends L.TileLayer
     while Math.max(x, y) > 1
       i += 1
       scaledTileSize *= 2
-      x = hf @imageProperties.width, scaledTileSize, i + 1
-      y = hf @imageProperties.height, scaledTileSize, i + 1
+      x = hf @imageProperties.width, scaledTileSize, i
+      y = hf @imageProperties.height, scaledTileSize, i
       @_tiers.push [x - 1, y - 1, x * y]
     @_tiers.reverse()
     @_numOfTiers = i + 1
-
-
 
 
   numOfTiers: ->
